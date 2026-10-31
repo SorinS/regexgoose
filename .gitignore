@@ -1,0 +1,5 @@
+# build outputs
+/test/*.c
+/tools/*/goose-*
+/test/vectors/re2-exhaustive.txt
+__pycache__/
