@@ -437,7 +437,7 @@ fn try_backtrack(re: const Regexp&, b: BitState&, s: const u8[:], pc0: i64, pos0
                     b.cap[i.arg] = pos;
                     break;
                 }
-                if (i.arg as i64) < b.ncap {
+                if i.arg < b.ncap {
                     // Capture pos to register, but save old value.
                     bt_push(b, insts, pc, b.cap[i.arg], true);     // come back when we're done.
                     b.cap[i.arg] = pos;

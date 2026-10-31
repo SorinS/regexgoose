@@ -140,7 +140,7 @@ fn go_unquote(q: const u8[:]) -> u8[>..], bool {
             }
         } else if e >= '0' && e <= '7' {
             if i + 2 > s.len { return out, false; }
-            var v = e - '0';
+            var v: i64 = (e as i64) - '0';
             for k in 2 {
                 let d = s[i + k];
                 if d < '0' || d > '7' { return out, false; }

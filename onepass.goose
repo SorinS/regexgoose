@@ -69,7 +69,7 @@ fn onepass_prefix(insts: const syntax::Inst[:], runes: const i32[:], start: i64)
 // (onePassNext); 0 for none.
 fn onepass_next(re: const Regexp&, i: OnePassInst, r: i64) -> i64 {
     let next = syntax::match_rune_pos(as_inst(i), re.op_runes, r);
-    if next >= 0 { return re.op_next[i.next as i64 + next]; }
+    if next >= 0 { return re.op_next[i.next + next]; }
     if i.op == syntax::INST_ALT_MATCH { return i.out; }
     return 0;
 }
@@ -449,9 +449,9 @@ fn onepass_copy(p: OnePassInst[>..]&) {
         // A:BC + B:DA => A:BC + B:DC
         var b_alt_is_out = true;     // p_B_Alt is &B.Out, p_B_Other is &B.Arg
         var patch = false;
-        if inst_alt.out as i64 == pc {
+        if inst_alt.out == pc {
             patch = true;
-        } else if inst_alt.arg as i64 == pc {
+        } else if inst_alt.arg == pc {
             patch = true;
             b_alt_is_out = false;
         }
@@ -537,7 +537,7 @@ fn onepass_match(re: const Regexp&, s: const u8[:], pos0: i64, ncap: i64, out: i
                 if !flag_match(f1, f2, inst.arg) { break; }
                 continue;
             } else if op == syntax::INST_CAPTURE {
-                if (inst.arg as i64) < ncap { matchcap[inst.arg] = pos; }
+                if inst.arg < ncap { matchcap[inst.arg] = pos; }
                 continue;
             } else {
                 abort("bad inst");

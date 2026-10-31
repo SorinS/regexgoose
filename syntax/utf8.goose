@@ -33,7 +33,7 @@ inline fn decode_rune(s: const u8[:], pos: i64) -> i32, i64 {
     let n = s.len - pos;
     if n < 1 { return RUNE_ERROR, 0; }
     let p0 = s[pos];
-    if p0 < 0x80 { return p0 as i32, 1; }
+    if p0 < 0x80 { return p0, 1; }
     return decode_multi(s, pos, n, p0);
 }
 
@@ -63,7 +63,7 @@ fn decode_last_rune(s: const u8[:], end: i64) -> i32, i64 {
     if end <= 0 { return RUNE_ERROR, 0; }
     var start = end - 1;
     let r = s[start];
-    if r < 0x80 { return r as i32, 1; }
+    if r < 0x80 { return r, 1; }
     let lim = max(end - 4, 0);
     start--;
     while start >= lim {
@@ -172,7 +172,7 @@ fn append_quoted(out: u8[>..]&, s: const u8[:], ascii_only: bool) {
         let r, width = decode_rune(s, pos);
         if width == 1 && r == RUNE_ERROR {
             out.append("\\x");
-            append_hex_digits(out, s[pos] as i64, 2);
+            append_hex_digits(out, s[pos], 2);
             pos += 1;
             continue;
         }
