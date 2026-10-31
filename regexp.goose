@@ -352,10 +352,13 @@ fn find_string_submatch(re: const Regexp&, s: const u8[:]) -> const u8[:][>..] {
 // Calls F(m) for each successive non-overlapping match of the expression
 // in s, at most n of them (all if n < 0), m being its 2 * (num_subexp + 1)
 // positions as find_submatch_index gives them; with ncap 2 only the
-// match's own two are set (Go's matches). An empty match right after the
-// previous match is not one.
-fn each_match<F>(re: const Regexp&, s: const u8[:], n: i64, ncap: i64) {
+// match's own two are set, with -1 (the default) all (Go's matches). An
+// empty match right after the previous match is not one.
+//
+//   re.each_match(text) { m => print(text[m[0]..m[1]]); };
+fn each_match<F>(re: const Regexp&, s: const u8[:], n: i64 = -1, ncap0: i64 = -1) {
     if n == 0 { return; }
+    let ncap = if ncap0 < 0 { re.num_cap } else { ncap0 };
     var left = n;
     let end = s.len;
     let width_all = max(2 * (re.nsubexp + 1), re.num_cap);

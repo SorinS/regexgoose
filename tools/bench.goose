@@ -120,8 +120,13 @@ fn main() {
     bench("OnePassLongNotPrefix") { sink += b(lnp.matches(az)); };
     let par = regexp::must_compile("foo (ba+r)? baz");
     bench("MatchShared") { sink += b(par.matches("this is a long line that contains foo bar baz")); };
-    bench("QuoteMetaAll") { sink += regexp::quote_meta("\\.+*?()|[]{}^$").len; };
-    bench("QuoteMetaNone") { sink += regexp::quote_meta("abcdefghijklmnopqrstuvwxyz").len; };
+    // Built at run time, as Go's are, so that the calls are not hoisted.
+    var specials: u8[>..] = [];
+    for c in 128 { if regexp::is_special(c as u8) { specials.push(c as u8); } }
+    var plain: u8[>..] = [];
+    plain.append(az);
+    bench("QuoteMetaAll") { sink += regexp::quote_meta(specials).len; };
+    bench("QuoteMetaNone") { sink += regexp::quote_meta(plain).len; };
     var hard: u8[>..] = [];
     for i in 50 { hard.append("((abc)*|"); }
     for i in 50 { hard.push(')'); }

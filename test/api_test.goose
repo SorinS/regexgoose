@@ -97,6 +97,14 @@ fn each_match_and_replace() {
     var seen: u8[>..] = [];
     re.each_match("a1 b2 c3", 2, re.num_cap) { m => format(seen, m[2], m[4], ";"); };
     check_str("each_match with n", seen, "01;34;");
+    var count = 0;
+    var groups = 0;
+    re.each_match("a1 b2 c3") { m =>
+        count++;
+        if m[4] >= 0 { groups++; }
+    };
+    check_int("each_match defaults: all", count, 3);
+    check_int("each_match defaults: groups set", groups, 3);
     let out = re.replace_all_func("a1 b2") { m => str("<", m, ">") };
     check_str("replace_all_func", out, "<a1> <b2>");
     check_str("replace_all expand", re.replace_all("a1 b2", "$2$1"), "1a 2b");
@@ -117,7 +125,24 @@ fn each_match_and_replace() {
     check_bool("literal_prefix incomplete", complete, false);
 }
 
+fn syntax_api() {
+    let tree, err = syntax::parse("(?i)k", syntax::PERL);
+    let prog = syntax::compile(tree);
+    check_str("Inst.String", syntax::inst_string(prog, prog.start), "rune \"K\"/i -> 2");
+    check_str("Op.String", syntax::op_string(syntax::OP_ALTERNATE), "Alternate");
+    check_str("InstOp.String", syntax::inst_op_string(syntax::INST_RUNE_ANY_NOT_NL), "InstRuneAnyNotNL");
+    check_int("EmptyOpContext", syntax::empty_op_context(-1, 'a'),
+              syntax::EMPTY_BEGIN_TEXT | syntax::EMPTY_BEGIN_LINE | syntax::EMPTY_WORD_BOUNDARY);
+    check_int("MaxCap", syntax::max_cap(tree), 0);
+    let two, e2 = syntax::parse("(a)(?P<x>b)", syntax::PERL);
+    check_str("CapNames", str(syntax::cap_names(two)), "[\"\", \"\", \"x\"]");
+    let same, e3 = syntax::parse("(a)(?P<x>b)", syntax::PERL);
+    check_bool("Equal", syntax::equal(two, same), true);
+    check_bool("not Equal", syntax::equal(two, tree), false);
+}
+
 fn main() {
+    syntax_api();
     views();
     unmatched_groups();
     utf8_input();

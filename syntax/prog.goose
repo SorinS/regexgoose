@@ -238,6 +238,13 @@ fn append_inst(b: u8[>..]&, i: Inst, runes: const i32[:]) {
     }
 }
 
+// Instruction pc of the program, as Go's Inst.String lists it.
+fn inst_string(p: const Prog&, pc: i64) -> u8[>..] {
+    var b: u8[>..] = [];
+    append_inst(b, p.insts[pc], p.runes);
+    return b;
+}
+
 // strconv.QuoteToASCII(string(runes)).
 fn append_runes_quoted(b: u8[>..]&, rs: const i32[:]) {
     var s: u8[>..] = [];

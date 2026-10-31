@@ -140,19 +140,12 @@ fn nfa_add(m: Nfa&, w: i64[:], insts: const syntax::Inst[:], q: i64, pc0: i64, p
     let dpc = 2 * n + q * n;
     let dhas = 4 * n + q * n;
     let caps = m.cap_at + q * n * ncap;
-    var sp = m.stack_at;
-    w[sp] = pc0;
-    w[sp + 1] = -1;
-    sp += 2;
+    let base = m.stack_at;
+    var sp = base;
     var len = qlen(m, q);
-    while sp > m.stack_at {
-        sp -= 2;
-        var pc = w[sp];
-        if pc < 0 {
-            // a capture slot to restore: (-1 - slot, old value)
-            w[cap_off - 1 - pc] = w[sp + 1];
-            continue;
-        }
+    var pc = pc0;
+    loop {
+        // Follow pc until it is a thread, a failure, or already in the queue.
         loop {
             if pc == 0 { break; }
             let j0 = w[sparse + pc];
@@ -165,6 +158,7 @@ fn nfa_add(m: Nfa&, w: i64[:], insts: const syntax::Inst[:], q: i64, pc0: i64, p
             let i = insts[pc];
             let op = i.op as i64;
             if op == syntax::INST_ALT || op == syntax::INST_ALT_MATCH {
+                // the second branch after the first
                 w[sp] = i.arg;
                 w[sp + 1] = -1;
                 sp += 2;
@@ -177,6 +171,7 @@ fn nfa_add(m: Nfa&, w: i64[:], insts: const syntax::Inst[:], q: i64, pc0: i64, p
             } else if op == syntax::INST_CAPTURE {
                 let slot = i.arg as i64;
                 if slot < ncap {
+                    // set the slot for what follows, and restore it after
                     w[sp] = -1 - slot;
                     w[sp + 1] = w[cap_off + slot];
                     sp += 2;
@@ -193,8 +188,21 @@ fn nfa_add(m: Nfa&, w: i64[:], insts: const syntax::Inst[:], q: i64, pc0: i64, p
                 break;
             }
         }
+        // The next branch to follow, restoring the captures on the way.
+        loop {
+            if sp == base {
+                set_qlen(m, q, len);
+                return;
+            }
+            sp -= 2;
+            if w[sp] >= 0 {
+                pc = w[sp];
+                break;
+            }
+            // a capture slot to restore: (-1 - slot, old value)
+            w[cap_off - 1 - w[sp]] = w[sp + 1];
+        }
     }
-    set_qlen(m, q, len);
 }
 
 // Runs the threads of runq on the rune c between pos and next_pos,
