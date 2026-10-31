@@ -96,3 +96,81 @@ fn summary(name: const u8[:]) {
     print(name, ": ", checks, " checks, ", failures, " failures");
     if failures > 0 { exit(1); }
 }
+
+// strconv.Unquote of a Go double-quoted string literal (quotes included):
+// the bytes, and false if it is not one.
+fn go_unquote(q: const u8[:]) -> u8[>..], bool {
+    var out: u8[>..] = [];
+    if q.len < 2 || q[0] != '"' || q[q.len - 1] != '"' { return out, false; }
+    let s = q[1..q.len - 1];
+    var i = 0;
+    while i < s.len {
+        let c = s[i];
+        if c != '\\' {
+            if c == '"' || c == '\n' { return out, false; }
+            out.push(c);
+            i++;
+            continue;
+        }
+        i++;
+        if i >= s.len { return out, false; }
+        let e = s[i];
+        i++;
+        if e == 'a' { out.push(7); }
+        else if e == 'b' { out.push(8); }
+        else if e == 'f' { out.push(12); }
+        else if e == 'n' { out.push('\n'); }
+        else if e == 'r' { out.push('\r'); }
+        else if e == 't' { out.push('\t'); }
+        else if e == 'v' { out.push(11); }
+        else if e == '\\' || e == '"' { out.push(e); }
+        else if e == 'x' || e == 'u' || e == 'U' {
+            let n = if e == 'x' { 2 } else if e == 'u' { 4 } else { 8 };
+            if i + n > s.len { return out, false; }
+            var v = 0;
+            for k in n {
+                let d = hex_digit(s[i + k]);
+                if d < 0 { return out, false; }
+                v = v * 16 + d;
+            }
+            i += n;
+            if e == 'x' { out.push(v as u8); } else {
+                if v > 0x10FFFF || (v >= 0xD800 && v <= 0xDFFF) { return out, false; }
+                syntax_append_rune(out, v);
+            }
+        } else if e >= '0' && e <= '7' {
+            if i + 2 > s.len { return out, false; }
+            var v = e - '0';
+            for k in 2 {
+                let d = s[i + k];
+                if d < '0' || d > '7' { return out, false; }
+                v = v * 8 + (d - '0');
+            }
+            if v > 255 { return out, false; }
+            i += 2;
+            out.push(v as u8);
+        } else {
+            return out, false;
+        }
+    }
+    return out, true;
+}
+
+// UTF-8 of a valid rune.
+fn syntax_append_rune(out: u8[>..]&, r: i64) {
+    if r < 0x80 {
+        out.push(r as u8);
+    } else if r < 0x800 {
+        out.push((0xC0 | (r >> 6)) as u8);
+        out.push((0x80 | (r & 0x3F)) as u8);
+    } else if r < 0x10000 {
+        out.push((0xE0 | (r >> 12)) as u8);
+        out.push((0x80 | ((r >> 6) & 0x3F)) as u8);
+        out.push((0x80 | (r & 0x3F)) as u8);
+    } else {
+        out.push((0xF0 | (r >> 18)) as u8);
+        out.push((0x80 | ((r >> 12) & 0x3F)) as u8);
+        out.push((0x80 | ((r >> 6) & 0x3F)) as u8);
+        out.push((0x80 | (r & 0x3F)) as u8);
+    }
+}
