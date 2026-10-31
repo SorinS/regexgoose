@@ -166,16 +166,17 @@ fn skip_nop(insts: const Inst[:], pc0: i64) -> i64 {
 
 // The literal string every match of the program must begin with, and
 // whether it is the whole match (Prog.Prefix).
-fn prefix(p: const Prog&) -> u8[>..], bool {
+fn prefix(p: const Prog&) -> u8[>..], bool { return prefix_of(p.insts, p.runes, p.start); }
+
+fn prefix_of(insts: const Inst[:], runes: const i32[:], start: i64) -> u8[>..], bool {
     var buf: u8[>..] = [];
-    let insts = p.insts;
-    var pc = skip_nop(insts, p.start);
+    var pc = skip_nop(insts, start);
     // Avoid allocation of buffer if prefix is empty.
     if inst_kind(insts[pc]) != INST_RUNE || insts[pc].nrune != 1 { return buf, insts[pc].op == INST_MATCH; }
     // Have prefix; gather characters.
     while inst_kind(insts[pc]) == INST_RUNE && insts[pc].nrune == 1 && insts[pc].arg & FOLD_CASE == 0 &&
-          p.runes[insts[pc].rune] != RUNE_ERROR {
-        append_rune(buf, p.runes[insts[pc].rune]);
+          runes[insts[pc].rune] != RUNE_ERROR {
+        append_rune(buf, runes[insts[pc].rune]);
         pc = skip_nop(insts, insts[pc].out);
     }
     return buf, insts[pc].op == INST_MATCH;
@@ -183,11 +184,13 @@ fn prefix(p: const Prog&) -> u8[>..], bool {
 
 // The empty-width conditions every match must meet at its start;
 // EMPTY_ALL if no match is possible (Prog.StartCond).
-fn start_cond(p: const Prog&) -> i64 {
+fn start_cond(p: const Prog&) -> i64 { start_cond_of(p.insts, p.start) }
+
+fn start_cond_of(insts: const Inst[:], start: i64) -> i64 {
     var flag = 0;
-    var pc = p.start;
+    var pc = start;
     loop {
-        let i = p.insts[pc];
+        let i = insts[pc];
         let o = i.op as i64;
         if o == INST_EMPTY_WIDTH {
             flag |= i.arg;
