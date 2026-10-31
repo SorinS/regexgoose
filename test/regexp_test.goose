@@ -5,7 +5,8 @@
 // FindAll forms with their limit, Match, the package's MatchString,
 // String, Compile's errors, ReplaceAll and its Literal and Func forms,
 // QuoteMeta, LiteralPrefix, NumSubexp, SubexpNames, SubexpIndex, Split,
-// and whether an expression gets a one-pass program.
+// and whether an expression gets a one-pass program; with Go's choice of
+// matcher and then with each matcher forced (regexp::debug_engine).
 
 import std;
 import regexp from "..";
@@ -270,7 +271,12 @@ fn go_tests() {
 }
 
 fn main() {
-    go_vectors();
-    go_tests();
+    // Go's choice of matcher, then each forced: Go's inputs are short, so
+    // its choice is mostly the backtracker or the one-pass matcher.
+    for engine in 4 {
+        regexp::debug_engine = engine;
+        go_vectors();
+        go_tests();
+    }
     summary("regexp");
 }

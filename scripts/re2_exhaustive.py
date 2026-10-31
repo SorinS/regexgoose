@@ -6,9 +6,10 @@ unpacked, so it is not kept in this repository) into a temporary
 directory, builds test/re2_exhaustive_test.goose natively, and runs it on
 the file. Every regexp is run on every string four ways (full and partial
 match, leftmost-first and leftmost-longest) by FindStringSubmatchIndex and
-MatchString, as Go's test does.
+MatchString, as Go's test does; then again with each matcher forced
+(regexp::debug_engine: the Pike VM, the backtracker, the one-pass matcher).
 
-    python3 scripts/re2_exhaustive.py [--goose PATH] [--go PATH]
+    python3 scripts/re2_exhaustive.py [--goose PATH] [--go PATH] [--engine N]
 """
 
 import argparse
@@ -35,6 +36,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--goose")
     ap.add_argument("--go", default=shutil.which("go") or "go")
+    ap.add_argument("--engine", type=int, help="only this engine (0: Go's choice)")
     args = ap.parse_args()
     goose = find_goose(args.goose)
     goroot = subprocess.run([args.go, "env", "GOROOT"], capture_output=True, text=True, check=True).stdout.strip()
@@ -48,10 +50,13 @@ def main():
                            capture_output=True, text=True)
         if p.returncode != 0:
             sys.exit("build failed:\n" + p.stdout + p.stderr)
-        t0 = time.time()
-        p = subprocess.run([exe, txt])
-        print("%.1f s" % (time.time() - t0))
-        sys.exit(p.returncode)
+        status = 0
+        for engine in ([args.engine] if args.engine is not None else [0, 1, 2, 3]):
+            t0 = time.time()
+            p = subprocess.run([exe, txt, str(engine)])
+            print("%.1f s" % (time.time() - t0))
+            status = status or p.returncode
+        sys.exit(status)
 
 
 if __name__ == "__main__":

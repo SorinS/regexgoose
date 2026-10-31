@@ -133,7 +133,7 @@ fn nfa_add(m: Nfa&, w: i64[:], insts: const syntax::Inst[:], q: i64, pc0: i64, p
     while sp > m.stack_at {
         sp -= 2;
         var pc = w[sp];
-        if w[sp + 1] >= 0 {
+        if pc < 0 {
             // a capture slot to restore: (-1 - slot, old value)
             w[cap_off - 1 - pc] = w[sp + 1];
             continue;
@@ -236,12 +236,13 @@ fn nfa_step(m: Nfa&, w: i64[:], insts: const syntax::Inst[:], runes: const i32[:
 
 // The leftmost match at or after pos (Go's machine.match); its captures
 // are then the ncap slots at m.match_at.
-fn nfa_match(re: const Regexp&, m: Nfa&, w: i64[:], s: const u8[:], pos0: i64) -> bool {
+// prefix is the program's literal prefix (Go's re.prefix where there is no
+// one-pass program; empty where there is, its program being anchored).
+fn nfa_match(re: const Regexp&, m: Nfa&, w: i64[:], s: const u8[:], pos0: i64, prefix: const u8[:]) -> bool {
     let start_cond = re.cond;
     if start_cond == syntax::EMPTY_ALL { return false; }     // impossible
     let insts = re.insts;
     let runes = re.runes;
-    let prefix = re.prefix;
     let ncap = m.ncap;
     let mc = m.match_at;
     m.matched = false;
@@ -462,8 +463,9 @@ fn try_backtrack(re: const Regexp&, b: BitState&, s: const u8[:], pc0: i64, pos0
 }
 
 // The leftmost match at or after pos by backtracking (Go's
-// Regexp.backtrack); its ncap captures go to out.
-fn backtrack(re: const Regexp&, s: const u8[:], pos0: i64, ncap: i64, out: i64[:]) -> bool {
+// Regexp.backtrack); its ncap captures go to out. prefix is as for
+// nfa_match.
+fn backtrack(re: const Regexp&, s: const u8[:], pos0: i64, ncap: i64, out: i64[:], prefix: const u8[:]) -> bool {
     let start_cond = re.cond;
     if start_cond == syntax::EMPTY_ALL { return false; }     // impossible
     if start_cond & syntax::EMPTY_BEGIN_TEXT != 0 && pos0 != 0 {
@@ -494,7 +496,6 @@ fn backtrack(re: const Regexp&, s: const u8[:], pos0: i64, ncap: i64, out: i64[:
         // looks like it's quadratic in the size of the text, but we are
         // not clearing visited between calls to try_backtrack, so no
         // work is duplicated and it ends up still being linear.
-        let prefix = re.prefix;
         var width = -1;
         while pos <= end && width != 0 {
             if prefix.len > 0 {

@@ -235,18 +235,37 @@ fn literal_prefix(re: const Regexp&) -> const u8[:], bool { return re.prefix, re
 
 // --- finding -------------------------------------------------------------------------
 
+// For testing: which matcher find_at uses. 0 (the default) chooses as Go
+// does; ENGINE_NFA always runs the Pike VM, ENGINE_BACKTRACK the
+// backtracker wherever the program is small enough for it (whatever the
+// input's length), ENGINE_ONEPASS the one-pass matcher wherever there is
+// a one-pass program; the Pike VM otherwise.
+var debug_engine: i64 = 0;
+let ENGINE_NFA = 1;
+let ENGINE_BACKTRACK = 2;
+let ENGINE_ONEPASS = 3;
+
 // The leftmost match at or after pos, as Go's find: its first ncap capture
 // slots in out (which has at least ncap), -1 for those not set. w is
 // scratch for the Pike VM, kept between calls.
 fn find_at(re: const Regexp&, s: const u8[:], pos: i64, ncap: i64, out: i64[:], w: i64[>..]&) -> bool {
     if s.len < re.min_input_len { return false; }
-    if re.onepass_start >= 0 { return onepass_match(re, s, pos, ncap, out); }
-    if s.len < re.max_bitstate_len { return backtrack(re, s, pos, ncap, out); }
+    // Go's prefix is the one-pass program's where there is one; the
+    // ordinary program's prefix is then empty (it begins with \A).
+    let prefix = if re.onepass_start >= 0 { re.prefix[..0] } else { re.prefix[..] };
+    if debug_engine == 0 {
+        if re.onepass_start >= 0 { return onepass_match(re, s, pos, ncap, out); }
+        if s.len < re.max_bitstate_len { return backtrack(re, s, pos, ncap, out, prefix); }
+    } else if debug_engine == ENGINE_BACKTRACK && re.insts.len <= MAX_BACKTRACK_PROG {
+        return backtrack(re, s, pos, ncap, out, prefix);
+    } else if debug_engine == ENGINE_ONEPASS && re.onepass_start >= 0 {
+        return onepass_match(re, s, pos, ncap, out);
+    }
     let n = re.insts.len;
     let need = nfa_space(n, ncap);
     if w.len < need { w.push_n(0, need - w.len); }
     var m = new_nfa(n, ncap, re.leftmost_longest);
-    if !nfa_match(re, m, w, s, pos) { return false; }
+    if !nfa_match(re, m, w, s, pos, prefix) { return false; }
     for k in ncap { out[k] = w[m.match_at + k]; }
     return true;
 }

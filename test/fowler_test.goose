@@ -152,13 +152,16 @@ fn run_file(file: const u8[:], data: const u8[:]) -> i64, i64 {
 
 fn main() {
     var total = 0;
+    for engine in 4 {
+    regexp::debug_engine = engine;
     for name in ["basic.dat", "nullsubexpr.dat", "repetition.dat"] {
         let data = if name == "basic.dat" { embed_file("vectors/basic.dat") }
                    else if name == "nullsubexpr.dat" { embed_file("vectors/nullsubexpr.dat") }
                    else { embed_file("vectors/repetition.dat") };
         let ran, skipped = run_file(name, data);
-        print(name, ": ", ran, " tests run, ", skipped, " lines skipped as Go skips them");
+        print(name, " (engine ", engine, "): ", ran, " tests run, ", skipped, " lines skipped as Go skips them");
         total += ran;
+    }
     }
     summary("fowler");
 }
