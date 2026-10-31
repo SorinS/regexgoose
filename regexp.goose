@@ -38,6 +38,7 @@ struct Regexp {
     start: i64,             // the program's start instruction
     num_cap: i64,           // the program's capture slots
     onepass_start: i64,     // the one-pass program's start, -1 if there is none
+    prefix_first: ByteSet,  // the first byte of prefix, for finding it
     prefix_complete: bool,  // prefix is the entire regexp
     leftmost_longest: bool, // whether regexp prefers leftmost-longest match
     expr: u8[],             // as passed to compile
@@ -101,7 +102,8 @@ fn quote(s: const u8[:]) -> u8[>..] {
 fn no_match(expr: const u8[:]) -> Regexp {
     Regexp {
         nsubexp: 0, max_bitstate_len: 0, prefix_rune: 0, prefix_end: 0, matchcap: 2, cond: syntax::EMPTY_ALL,
-        min_input_len: 0, start: 0, num_cap: 2, onepass_start: -1, prefix_complete: false, leftmost_longest: false,
+        min_input_len: 0, start: 0, num_cap: 2, onepass_start: -1, prefix_first: byte_set(""), prefix_complete: false,
+        leftmost_longest: false,
         expr: expr, prefix: [], names: [], name_ends: [0],
         insts: [syntax::Inst { op: syntax::INST_FAIL, out: 0, arg: 0, rune: 0, nrune: 0 }],
         runes: [], op_insts: [], op_runes: [], op_next: [],
@@ -155,7 +157,8 @@ fn compile_mode(expr: const u8[:], mode: i64, longest: bool) -> Regexp, syntax::
     return Regexp {
         nsubexp: max_cap, max_bitstate_len: max_bits, prefix_rune: prefix_rune, prefix_end: prefix_end,
         matchcap: matchcap, cond: cond, min_input_len: min_len, start: start, num_cap: num_cap,
-        onepass_start: op_start, prefix_complete: complete, leftmost_longest: longest,
+        onepass_start: op_start, prefix_first: byte_set(prefix[..min(1, prefix.len)]), prefix_complete: complete,
+        leftmost_longest: longest,
         expr: expr, prefix: prefix, names: names, name_ends: name_ends, insts: insts, runes: runes,
         op_insts: op_insts, op_runes: op_runes, op_next: op_next,
     }, err;

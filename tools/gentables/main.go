@@ -375,6 +375,12 @@ func main() {
 	writeInts(&b, "UNICODE_FOLD", "i32", folds, 16)
 	writeInts(&b, "UNICODE_SIGN", "i8", signs, 24)
 
+	var asciiFold []int
+	for r := rune(0); r < 128; r++ {
+		asciiFold = append(asciiFold, int(unicode.SimpleFold(r)))
+	}
+	b.WriteString("// unicode.SimpleFold of the ASCII runes.\n")
+	writeInts(&b, "ASCII_FOLD", "i32", asciiFold, 16)
 	b.WriteString("// unicode.SimpleFold: FOLD_TO[i] for FOLD_FROM[i], sorted; any other\n// rune folds to itself.\n")
 	writeInts(&b, "FOLD_FROM", "i32", foldFrom, 12)
 	writeInts(&b, "FOLD_TO", "i32", foldTo, 12)

@@ -73,6 +73,21 @@ fn flag_match(r1: i64, r2: i64, op0: i64) -> bool {
     return op == 0;
 }
 
+// Where prefix first occurs in s from pos on, as an offset from pos, -1 if
+// it does not (Go's input.index): the C library's memchr (or SIMD) finds
+// its first byte, first_set, and the rest is compared there.
+fn index_prefix(s: const u8[:], pos: i64, prefix: const u8[:], first_set: const ByteSet&) -> i64 {
+    var at = pos;
+    loop {
+        let k = find_any(s[at..], first_set);
+        if k < 0 { return -1; }
+        let p = at + k;
+        if s.len - p < prefix.len { return -1; }
+        if s[p..p + prefix.len] == prefix { return p - pos; }
+        at = p + 1;
+    }
+}
+
 // --- the Pike VM ---------------------------------------------------------------
 
 // The NFA simulation's state. Its arrays are regions of one workspace `w`
@@ -271,7 +286,7 @@ fn nfa_match(re: const Regexp&, m: Nfa&, w: i64[:], s: const u8[:], pos0: i64, p
             }
             if prefix.len > 0 && r1 != re.prefix_rune {
                 // Match requires literal prefix; fast search for it.
-                let advance = ::find(s[pos..], prefix);
+                let advance = index_prefix(s, pos, prefix, re.prefix_first);
                 if advance < 0 { break; }
                 pos += advance;
                 r, width = step_at(s, pos);
@@ -500,7 +515,7 @@ fn backtrack(re: const Regexp&, s: const u8[:], pos0: i64, ncap: i64, out: i64[:
         while pos <= end && width != 0 {
             if prefix.len > 0 {
                 // Match requires literal prefix; fast search for it.
-                let advance = ::find(s[pos..], prefix);
+                let advance = index_prefix(s, pos, prefix, re.prefix_first);
                 if advance < 0 { return false; }
                 pos += advance;
             }

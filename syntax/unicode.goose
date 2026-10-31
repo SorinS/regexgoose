@@ -34,6 +34,7 @@ fn in_pairs(r: i64, class: const i32[:]) -> bool {
 // unicode.SimpleFold: the next rune of r's fold orbit, r itself for a
 // rune that folds to nothing else (and for one out of range).
 fn simple_fold(r: i64) -> i64 {
+    if r >= 0 && r < 128 { return ASCII_FOLD[r]; }
     if r < MIN_FOLD || r > MAX_FOLD { return r; }
     var lo = 0;
     var hi = FOLD_FROM.len;
